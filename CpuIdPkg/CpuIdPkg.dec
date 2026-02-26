@@ -1,0 +1,6 @@
+[Defines]
+  DEC_SPECIFICATION              = 0x00010005
+  PACKAGE_NAME                   = CpuIdPkg
+  PACKAGE_GUID                   = ce09bdf9-3bec-474c-8b11-150fe405be6f
+  PACKAGE_VERSION                = 1.0
+

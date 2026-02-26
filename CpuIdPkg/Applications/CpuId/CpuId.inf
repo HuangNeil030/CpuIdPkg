@@ -1,0 +1,27 @@
+## @file CpuId.inf
+#  INF file for the CPUID Utility Application.
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = CpuId
+  FILE_GUID                      = b6ab43f7-c594-4daa-ab59-9a39cfc7a9cd
+  MODULE_TYPE                    = UEFI_APPLICATION
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = UefiMain
+
+[Sources]
+  CpuId.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+
+[LibraryClasses]
+  UefiApplicationEntryPoint
+  UefiLib
+  BaseLib
+  PrintLib
+  PciLib
+  IoLib
+  [Protocols]
+  gEfiCpuArchProtocolGuid
