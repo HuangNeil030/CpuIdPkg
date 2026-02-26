@@ -157,6 +157,67 @@ STATIC BOOLEAN CpuSupportsMtrr (VOID);
 
 *(註：若使用 `Dump MSR`，您可以大膽設定 Start 為 `0x00`，End 為 `0xFF`，觀察 `SafeReadMsr` 如何優雅地將不存在的位址標示為 `[Invalid / #GP]` 而不引發當機。)*
 
+## 系統架構與主選單流程 (System Architecture & Menu Flow)
+
+```
+[ UEFI 進入點 (UefiMain) ]
+       │
+       ├─ 1. 清空鍵盤輸入緩衝區 (ConIn->Reset)
+       ├─ 2. 尋找並綁定 CPU Protocol (LocateProtocol) ──> 取得 mCpu 指標
+       │
+       ▼
+[ 主選單迴圈 (RunMainMenu) ] <───────────────────────────┐
+       │                                                 │
+       ├─ 重繪 UI 介面 (ShowHeaderAndMenu)               │
+       ├─ 阻塞等待使用者按鍵 (ReadKeyBlocking)           │
+       │                                                 │
+       ├─ [↑] / [↓] 方向鍵: 移動選單的反白游標           │
+       ├─ [ESC] 鍵: 退出程式 ─────────────────(結束程式) │
+       │                                                 │
+       └─ [Enter] 鍵: 進入選中的功能分支 ────────────────┤
+                                                         │
+=========================================================│
+功能分支 (Feature Branches)                              │
+=========================================================│
+                                                         │
+[0] CPU ID 單次查詢 (DoCpuId)                            │
+ │  ├─ 提示輸入 Leaf (16進位)                            │
+ │  ├─ 執行 AsmCpuid 提取特徵碼                          │
+ │  └─ 印出 EAX, EBX, ECX, EDX (自動解析 Leaf 0, 1)      │
+ │                                                       │
+[1] Dump CPU ID 完整傾印 (DoDumpCpuId)                   │
+ │  ├─ 查詢最大基礎功能號 (Max Basic Leaf)               │
+ │  ├─ 迴圈: 0x00000000 -> Max Basic                     │
+ │  ├─ 查詢最大擴充功能號 (Max Ext. Leaf)                │
+ │  ├─ 迴圈: 0x80000000 -> Max Ext.                      │
+ │  └─ 解析並印出 CPU 品牌字串 (Brand String)            │
+ │     (註: 傾印過程皆受 PageLineAccountingEx 分頁控制)  │
+ │                                                       │
+[2] Read MSR 讀取單一暫存器 (DoReadMsr)                  │
+ │  ├─ 提示輸入 MSR Index                                │
+ │  └─ 呼叫 SafeReadMsr() ──(若不存在則顯示 #GP 警告)    │
+ │                                                       │
+[3] Dump MSR 區間傾印 (DoDumpMsr)                        │
+ │  ├─ 提示輸入 Start Index 與 End Index                 │
+ │  └─ 迴圈: 逐一掃描 Start -> End                       │
+ │      ├─ 讀取成功: 印出 64-bit 數值                    │
+ │      └─ 讀取失敗: 印出 [Invalid / #GP] (略過錯誤)     │
+ │                                                       │
+[4] Write MSR 寫入暫存器 (DoWriteMsr)                    │
+ │  ├─ 提示輸入 Index 與欲寫入的 64-bit Data             │
+ │  ├─ 二次確認 (Y/N) 防呆機制                           │
+ │  └─ 呼叫 SafeWriteMsr() ──(寫入後重新 Read-Back 驗證) │
+ │                                                       │
+[5] Dump MTRR 傾印快取組態 (DoDumpMtrr)                  │
+ │  ├─ 讀取 MTRRCAP 與 MTRR_DEF_TYPE 取得全域啟用狀態    │
+ │  ├─ 查詢實體定址位元數 (Physical Address Bits)        │
+ │  ├─ Dump Variable Ranges (解析 10 組 Base & Mask)     │
+ │  └─ Dump Fixed Ranges (解析 11 個固定區段之 8 Bytes)  │
+ │                                                       │
+ └────────────────(功能執行完畢，等待任意鍵)─────────────┘
+
+```
+
 ---
 
 cd /d D:\BIOS\MyWorkSpace\edk2
